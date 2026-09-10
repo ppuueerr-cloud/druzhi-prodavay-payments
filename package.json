@@ -1,0 +1,7 @@
+{
+  "name": "druzhi-prodavay-payments",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Платёжный бэкенд марафона «Дружи и Продавай» (Т-Касса + Telegram-уведомления) на Vercel Serverless Functions",
+  "scripts": {}
+}
