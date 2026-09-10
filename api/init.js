@@ -24,7 +24,7 @@ const https = require('https');
 const crypto = require('crypto');
 const { RUSSIAN_TRUSTED_CERTS } = require('../lib/certs');
 
-const AMOUNT_KOPECKS = 495000; // 4 950 ₽ — фиксировано на сервере
+const AMOUNT_KOPECKS = 100; // ВРЕМЕННО: 1 ₽ для тестового платежа — после проверки Telegram-уведомления вернуть 495000 (4 950 ₽)
 const DESCRIPTION = 'Марафон «Дружи и Продавай»';
 
 function setCors(res) {
