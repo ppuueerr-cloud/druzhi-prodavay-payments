@@ -18,6 +18,15 @@
  *   SITE_URL          — публичный адрес сайта, например
  *                        https://druzhi-prodavay.pages.dev
  *                        (без слэша на конце)
+ *   BOT_TOKEN         — токен Telegram-бота от @BotFather (секрет!)
+ *   CHAT_ID           — chat_id менеджера, куда слать уведомления
+ *
+ * ВАЖНО: Т-Касса НЕ возвращает обратно поля DATA (name/email/phone) в
+ * вебхуке /api/notification — банк их просто не эхо́ит. Поэтому имя,
+ * email и телефон клиента отправляются менеджеру в Telegram СРАЗУ здесь,
+ * в момент создания заказа (ещё до того, как клиент оплатил), а
+ * /api/notification потом присылает второе сообщение — уже про то, что
+ * деньги реально пришли, с привязкой по номеру заказа (OrderId).
  */
 
 const https = require('https');
@@ -79,6 +88,36 @@ function postJson(hostname, path, bodyObj) {
       }
     );
     req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
+}
+
+// Обычный https.request к api.telegram.org — сертификат Telegram
+// стандартный (доверенный всеми), поэтому специальный ca тут не нужен.
+function sendTelegramMessage(botToken, chatId, text) {
+  return new Promise((resolve) => {
+    if (!botToken || !chatId) {
+      resolve();
+      return;
+    }
+    const data = JSON.stringify({ chat_id: chatId, text: text });
+    const req = https.request(
+      {
+        hostname: 'api.telegram.org',
+        path: '/bot' + botToken + '/sendMessage',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(data),
+        },
+      },
+      (res) => {
+        res.on('data', () => {});
+        res.on('end', resolve);
+      }
+    );
+    req.on('error', () => resolve());
     req.write(data);
     req.end();
   });
@@ -199,6 +238,24 @@ module.exports = async function handler(req, res) {
       sentParams: flatParams,
     });
     return;
+  }
+
+  // Отправляем менеджеру данные клиента сразу — Т-Касса не возвращает их
+  // обратно в /api/notification, поэтому единственный надёжный момент
+  // их отправить — прямо сейчас, пока они у нас есть.
+  const amountRubles = (AMOUNT_KOPECKS / 100).toLocaleString('ru-RU');
+  const orderText =
+    'Новая заявка — марафон «Дружи и Продавай», ' + amountRubles + ' ₽\n' +
+    'Имя: ' + (name || '—') + '\n' +
+    'Email: ' + (email || '—') + '\n' +
+    'Телефон: ' + (phone || '—') + '\n' +
+    'Заказ: ' + orderId + '\n' +
+    '(ожидает оплаты)';
+
+  try {
+    await sendTelegramMessage(process.env.BOT_TOKEN, process.env.CHAT_ID, orderText);
+  } catch (err) {
+    // Не критично для ответа клиенту — он должен попасть на страницу оплаты в любом случае.
   }
 
   res.status(200).json({ paymentUrl: result.PaymentURL, orderId: orderId });
