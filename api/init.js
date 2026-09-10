@@ -137,6 +137,24 @@ module.exports = async function handler(req, res) {
 
   const token = buildToken(flatParams, process.env.TERMINAL_PASSWORD);
 
+  // Терминал требует обязательный кассовый чек (54-ФЗ). У ИП — патентная
+  // система налогообложения (ПСН), поэтому Taxation = 'patent', а налог
+  // по позиции — 'none' (патент не облагается НДС отдельно).
+  const receipt = {
+    Email: email || undefined,
+    Phone: phone,
+    Taxation: 'patent',
+    Items: [
+      {
+        Name: DESCRIPTION,
+        Price: AMOUNT_KOPECKS,
+        Quantity: 1,
+        Amount: AMOUNT_KOPECKS,
+        Tax: 'none',
+      },
+    ],
+  };
+
   const tinkoffRequestBody = {
     ...flatParams,
     Token: token,
@@ -145,6 +163,7 @@ module.exports = async function handler(req, res) {
       email: email || '-',
       phone: phone,
     },
+    Receipt: receipt,
   };
 
   let result;
