@@ -88,12 +88,13 @@ module.exports = async function handler(req, res) {
   // Успешный платёж при обычной (одностадийной) оплате приходит со
   // статусом CONFIRMED.
   if (body.Status === 'CONFIRMED') {
-    const data = body.Data || {};
+    // Т-Касса не возвращает обратно поля DATA (name/email/phone) —
+    // имя/email/телефон клиента уже были отправлены менеджеру отдельным
+    // сообщением из /api/init в момент создания заказа. Здесь только
+    // подтверждаем сам факт оплаты и реальную сумму, привязка — по OrderId.
+    const amountRubles = (Number(body.Amount || 0) / 100).toLocaleString('ru-RU');
     const text =
-      'Новая оплата — марафон «Дружи и Продавай», 4 950 ₽\n' +
-      'Имя: ' + (data.name || '—') + '\n' +
-      'Email: ' + (data.email || '—') + '\n' +
-      'Телефон: ' + (data.phone || '—') + '\n' +
+      'Оплата подтверждена — марафон «Дружи и Продавай», ' + amountRubles + ' ₽\n' +
       'Заказ: ' + (body.OrderId || '—');
 
     try {
