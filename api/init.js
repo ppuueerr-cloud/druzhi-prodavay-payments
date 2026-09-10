@@ -172,7 +172,12 @@ module.exports = async function handler(req, res) {
   if (!result || !result.Success) {
     res.status(502).json({
       error: 'tinkoff_error',
-      details: (result && (result.Message || result.Details)) || '',
+      message: (result && result.Message) || '',
+      details: (result && result.Details) || '',
+      errorCode: (result && result.ErrorCode) || '',
+      terminalKeyUsed: process.env.TERMINAL_KEY || '',
+      passwordLength: (process.env.TERMINAL_PASSWORD || '').length,
+      sentParams: flatParams,
     });
     return;
   }
